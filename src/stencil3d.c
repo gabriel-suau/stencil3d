@@ -5,9 +5,9 @@
 
 #define abs(a) ((a) > 0 ? (a) : -(a))
 #define min(a,b) ((a > b) ? (b) : (a))
-#define SIZEX 5
-#define SIZEY 5
-#define SIZEZ 5
+#define SIZEX 150
+#define SIZEY 150
+#define SIZEZ 150
 
 void stencil3d(float *a, float *b) {
   int i, j, k;
