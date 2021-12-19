@@ -12,44 +12,32 @@ BINDIR = bin
 SRC = $(SRCDIR)/stencil3d.c
 EXEC = $(BINDIR)/gcc_base
 
-gcc_base: CC = gcc
-gcc_base: C_FLAGS += $(GCC_DEBUG_FLAGS)
-gcc_base: SRC = $(SRCDIR)/stencil3d.c
-gcc_base: EXEC = $(BINDIR)/gcc_base
-gcc_base: $(EXEC)
+gcc_debug: CC = gcc
+gcc_debug: C_FLAGS += $(GCC_DEBUG_FLAGS)
+gcc_debug: SRC = $(SRCDIR)/stencil3d.c
+gcc_debug: EXEC = $(BINDIR)/gcc_debug
+gcc_debug: $(EXEC)
 
-gcc_inv_loop: CC = gcc
-gcc_inv_loop: C_FLAGS += $(GCC_DEBUG_FLAGS)
-gcc_inv_loop: SRC = $(SRCDIR)/stencil3d_inv_loop.c
-gcc_inv_loop: EXEC = $(BINDIR)/gcc_inv_loop
-gcc_inv_loop: $(EXEC)
+gcc_autovec: CC = gcc
+gcc_autovec: C_FLAGS += $(GCC_AUTOVEC_FLAGS)
+gcc_autovec: SRC = $(SRCDIR)/stencil3d.c
+gcc_autovec: EXEC = $(BINDIR)/gcc_autovec
+gcc_autovec: $(EXEC)
 
-gcc_inv_loop_autovec: CC = gcc
-gcc_inv_loop_autovec: C_FLAGS += $(GCC_AUTOVEC_FLAGS)
-gcc_inv_loop_autovec: SRC = $(SRCDIR)/stencil3d_inv_loop.c
-gcc_inv_loop_autovec: EXEC = $(BINDIR)/gcc_inv_loop_autovec
-gcc_inv_loop_autovec: $(EXEC)
+clang_debug: CC = clang
+clang_debug: C_FLAGS += $(CLANG_DEBUG_FLAGS)
+clang_debug: SRC = $(SRCDIR)/stencil3d.c
+clang_debug: EXEC = $(BINDIR)/clang_debug
+clang_debug: $(EXEC)
 
-clang_base: CC = clang
-clang_base: C_FLAGS += $(CLANG_DEBUG_FLAGS)
-clang_base: SRC = $(SRCDIR)/stencil3d.c
-clang_base: EXEC = $(BINDIR)/clang_base
-clang_base: $(EXEC)
-
-clang_inv_loop: CC = clang
-clang_inv_loop: C_FLAGS += $(CLANG_DEBUG_FLAGS)
-clang_inv_loop: SRC = $(SRCDIR)/stencil3d_inv_loop.c
-clang_inv_loop: EXEC = $(BINDIR)/clang_inv_loop
-clang_inv_loop: $(EXEC)
-
-clang_inv_loop_autovec: CC = clang
-clang_inv_loop_autovec: C_FLAGS += $(CLANG_AUTOVEC_FLAGS)
-clang_inv_loop_autovec: SRC = $(SRCDIR)/stencil3d_inv_loop.c
-clang_inv_loop_autovec: EXEC = $(BINDIR)/clang_inv_loop_autovec
-clang_inv_loop_autovec: $(EXEC)
+clang_autovec: CC = clang
+clang_autovec: C_FLAGS += $(CLANG_AUTOVEC_FLAGS)
+clang_autovec: SRC = $(SRCDIR)/stencil3d.c
+clang_autovec: EXEC = $(BINDIR)/clang_autovec
+clang_autovec: $(EXEC)
 
 $(EXEC): $(SRC)
 	$(CC) $(SRC) $(C_FLAGS) -o $(EXEC)
 
 clean:
-	rm -f ./bin/*
+	rm -f $(BINDIR)/*
