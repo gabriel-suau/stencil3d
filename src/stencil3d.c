@@ -6,19 +6,46 @@
 /* #define abs(a) ((a) > 0 ? (a) : -(a)) */
 /* #define min(a,b) ((a > b) ? (b) : (a)) */
 
-#define SIZEX 150
-#define SIZEY 150
-#define SIZEZ 150
+#define SIZEX 128
+#define SIZEY 128
+#define SIZEZ 128
 
 #define SCALAR float
 /* #define SCALAR double */
 
 #define cell(tab, k, i, j) (tab[(k) * SIZEX * SIZEY + (i) * SIZEX + (j)])
 
+
+/**
+ * \param[out] a array of values to be computed
+ * \param[in] b array of values to compute a with
+ *
+ * Base implementation of the stencil3d kernel. Performances are
+ * expected to be bad.
+ */
 void stencil3d_base(SCALAR *restrict a, const SCALAR *restrict b);
+
+/**
+ * \param[out] a array of values to be computed
+ * \param[in] b array of values to compute a with
+ *
+ * Implementation of the stencil3d kernel with loop reordering, in order to
+ * optimize data locality and reduce cache misses.
+ */
 void stencil3d_inv_loop(SCALAR *restrict a, const SCALAR *restrict b);
+
+/**
+ * \param[out] a array of values to be computed
+ * \param[in] b array of values to compute a with
+ *
+ * Same implementation as \a stencil3d_inv_loop, but the division by 13 is
+ * only computed once at the beginning of the function.
+ */
 void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b);
 
+/**
+ * Function pointer to handle the user's kernel choice at runtime.
+ */
 static void (*stencil3d)(SCALAR *restrict, const SCALAR *restrict) = NULL;
 
 int main(int argc, char **argv) {
