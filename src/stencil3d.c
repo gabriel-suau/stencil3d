@@ -6,9 +6,13 @@
 /* #define abs(a) ((a) > 0 ? (a) : -(a)) */
 /* #define min(a,b) ((a > b) ? (b) : (a)) */
 
-#define SIZEX 128
-#define SIZEY 128
-#define SIZEZ 128
+#define INV_THIRTEEN 0.07692307692307692307692
+
+#define SIZEX 130
+#define SIZEY 130
+#define SIZEZ 130
+
+#define TILE_SIZE 16
 
 #define SCALAR float
 /* #define SCALAR double */
@@ -39,9 +43,18 @@ void stencil3d_inv_loop(SCALAR *restrict a, const SCALAR *restrict b);
  * \param[in] b array of values to compute a with
  *
  * Same implementation as \a stencil3d_inv_loop, but the division by 13 is
- * only computed once at the beginning of the function.
+ * replace by the multiplication of 1/13 (which value is known at compile time).
  */
 void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b);
+
+/**
+ * \param[out] a array of values to be computed
+ * \param[in] b array of values to compute a with
+ *
+ * Tiled implementation of \a stencil3d_inv_loop_onediv. The tile size is
+ * chosen so that the whole tile can fit in the L2-cache
+ */
+void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict b);
 
 /**
  * Function pointer to handle the user's kernel choice at runtime.
@@ -77,6 +90,9 @@ int main(int argc, char **argv) {
   else if (!strcmp(kernel, "inv_loop_onediv")) {
     stencil3d = stencil3d_inv_loop_onediv;
   }
+  else if (!strcmp(kernel, "inv_loop_onediv_tiled")) {
+    stencil3d = stencil3d_inv_loop_onediv_tiled;
+  }
   else {
     fprintf(stderr, "Error : %s : no corresponding kernel.\n", kernel);
     exit(EXIT_FAILURE);
@@ -87,22 +103,22 @@ int main(int argc, char **argv) {
   s = 0;
 
   /* Initialization */
-  for (i = 0 ; i < SIZEX ; i++)    
-    for (j = 0 ; j < SIZEY ; j++)    
-      for (k = 0 ; k < SIZEZ ; k++)    
-	a[k * SIZEY * SIZEX + i * SIZEY + j] = b[k * SIZEY * SIZEX + i * SIZEY + j] = (j + 1.) / ((k + 1) * (i + 1));
+  for (k = 0 ; k < SIZEZ ; k++)
+    for (i = 0 ; i < SIZEY ; i++)
+      for (j = 0 ; j < SIZEX ; j++)
+        cell(a, k, i, j) = cell(b, k, i, j) = (j + 1.) / ((k + 1) * (i + 1));
 
-  for (j = SIZEY / 4 ; j < SIZEY / 2 ; j++) 
-    for (i = SIZEX / 4 ; i < SIZEX / 2 ; i++) 
-      b[i * SIZEY + j] = a[i * SIZEY + j] = 1;
+  for (i = SIZEY / 4 ; i < SIZEY / 2 ; i++)
+    for (j = SIZEX / 4 ; j < SIZEX / 2 ; j++)
+      cell(b, 0, i, j) = cell(a, 0, i, j) = 1;
 
   /* Computation loop */
-  for(h = 0 ; h < 100 ; h++) {
+  for (h = 0 ; h < 100 ; h++) {
     stencil3d(a, b);
-    for (i = 0 ; i < SIZEX ; i++)    
-      for (j = 0 ; j < SIZEY ; j++)    
-        for (k = 0 ; k < SIZEZ ; k++)    
-          s += a[k * SIZEY * SIZEX + i * SIZEY + j];
+    for (k = 0 ; k < SIZEZ ; k++)    
+      for (i = 0 ; i < SIZEY ; i++)    
+        for (j = 0 ; j < SIZEX ; j++)    
+          s += cell(a, k, i, j);
     stencil3d(b, a);
     fprintf(stderr,".");
   }
@@ -111,6 +127,7 @@ int main(int argc, char **argv) {
 
   free(a);
   free(b);
+  free(kernel);
 
   return 0;
 }
@@ -162,10 +179,10 @@ void stencil3d_inv_loop(SCALAR *restrict a, const SCALAR *restrict b) {
 
 void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b) {
   int i, j, k;
-  SCALAR inv_thirteen = 1.0 / 13;
 
   for (k = 1 ; k < SIZEZ - 1 ; k++)
     for (i = 1 ; i < SIZEY - 1 ; i++)
+/* #pragma GCC unroll 4 */
       for (j = 1 ; j < SIZEX - 1 ; j++)
 	cell(a, k, i, j) = (12 * cell(b, k, i, j) +
                             cell(b, k, i, j + 1) +
@@ -179,5 +196,37 @@ void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b) {
                             cell(b, k - 1, i, j + 1) +
                             cell(b, k - 1, i, j - 1) +
                             cell(b, k - 1, i + 1, j + 1) +
-                            cell(b, k - 1, i - 1, j - 1)) * inv_thirteen;
+                            cell(b, k - 1, i - 1, j - 1)) * INV_THIRTEEN;
+}
+
+
+static inline void stencil3d_do_tile(SCALAR *restrict a, const SCALAR *restrict b) {
+  int i, j, k;
+
+  for (k = 0 ; k < TILE_SIZE ; k++)
+    for (i = 0 ; i < TILE_SIZE ; i++)
+      for (j = 0 ; j < TILE_SIZE ; j++)
+	cell(a, k, i, j) = (12 * cell(b, k, i, j) +
+                            cell(b, k, i, j + 1) +
+                            cell(b, k, i, j - 1) +
+                            cell(b, k, i + 1, j + 1) +
+                            cell(b, k, i - 1, j - 1) +
+                            cell(b, k + 1, i, j + 1) +
+                            cell(b, k + 1, i, j - 1) +
+                            cell(b, k + 1, i + 1, j + 1) +
+                            cell(b, k + 1, i - 1, j - 1) +
+                            cell(b, k - 1, i, j + 1) +
+                            cell(b, k - 1, i, j - 1) +
+                            cell(b, k - 1, i + 1, j + 1) +
+                            cell(b, k - 1, i - 1, j - 1)) * INV_THIRTEEN;        
+}
+
+
+void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict b) {
+  int i, j, k;
+
+  for (k = 1 ; k < SIZEZ - 1 ; k += TILE_SIZE)
+    for (i = 1 ; i < SIZEY - 1 ; i += TILE_SIZE)
+      for (j = 1 ; j < SIZEX - 1 ; j += TILE_SIZE)
+        stencil3d_do_tile(&cell(a, k, i, j), &cell(b, k, i, j));
 }
