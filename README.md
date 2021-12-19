@@ -18,7 +18,7 @@ They will produce an executable with the target name in the `bin` directory. To 
 ./bin/executable_name kernel_name
 ```
 
-where `kernel_name` is the name of the kernel. The available kernels are : `base`, `inv_loop`, `inv_loop_onediv`.
+where `kernel_name` is the name of the kernel. The available kernels are : `base`, `inv_loop`, `inv_loop_onediv`. For more information about what each kernel does, please read the Doxygen documentation or the source code.
 
 ## Credits
 All credits go to Robin Colombier and Gabriel Suau.
