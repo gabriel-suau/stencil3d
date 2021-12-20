@@ -18,13 +18,15 @@ for EXEC in $@; do
         echo ""
         echo "## Error : File $EXEC is not an executable. Moving to next file in list..."
         echo ""
-        break
+        continue
     fi
 
     LOGFILE=./log/${EXEC##*/}.run
 
     echo ""
+    echo "--------------------------------------------------"
     echo "Running performance tests for $EXEC"
+    echo "--------------------------------------------------"
     echo ""
 
     for KERNEL in ${kernels[@]}; do
