@@ -43,7 +43,7 @@ void stencil3d_inv_loop(SCALAR *restrict a, const SCALAR *restrict b);
  * \param[in] b array of values to compute a with
  *
  * Same implementation as \a stencil3d_inv_loop, but the division by 13 is
- * replace by the multiplication of 1/13 (which value is known at compile time).
+ * replaced by the multiplication with 1/13 (which value is known at compile time).
  */
 void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b);
 
@@ -52,9 +52,17 @@ void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b);
  * \param[in] b array of values to compute a with
  *
  * Tiled implementation of \a stencil3d_inv_loop_onediv. The tile size is
- * chosen so that the whole tile can fit in the L2-cache
+ * chosen so that the whole tile can fit in the L1-cache
  */
 void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict b);
+
+/**
+ * \param[out] a array of values to be computed
+ * \param[in] b array of values to compute a with
+ *
+ * Straightforward OpenMP implementation of \a stencil3d_inv_loop_onediv.
+ */
+void stencil3d_inv_loop_onediv_omp(SCALAR *restrict a, const SCALAR *restrict b);
 
 /**
  * Function pointer to handle the user's kernel choice at runtime.
