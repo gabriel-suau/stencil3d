@@ -3,11 +3,11 @@ C_FLAGS = -pg -pedantic
 
 GCC_FLAGS = -Wall -Wextra -fopenmp -fopenacc -fopt-info-all
 GCC_DEBUG_FLAGS = -O0 -g
-GCC_AUTOVEC_FLAGS = -O2 -fopt-info-vec-all -ftree-vectorize
+GCC_AUTOVEC_FLAGS = -O2
 
-CLANG_FLAGS = -Weverything -fopenmp
+CLANG_FLAGS = -Weverything -fopenmp -Rpass=.* -Rpass-missed=.*
 CLANG_DEBUG_FLAGS = -O0 -g
-CLANG_AUTOVEC_FLAGS = -O2 -Rpass=loop-vectorize -Rpass-missed=loop-vectorize -Rpass-analysis=loop-vectorize -Rpass=slp-vectorize -Rpass-missed=slp-vectorize -Rpass-analysis=slp-vectorize
+CLANG_AUTOVEC_FLAGS = -O2
 
 SRCDIR = src
 BINDIR = bin
