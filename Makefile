@@ -55,6 +55,7 @@ clang_autovec: LOGFILE = $(LOGDIR)/clang_autovec.comp
 clang_autovec: $(EXEC)
 
 $(EXEC): $(SRC)
+	mkdir -p $(BINDIR) $(ASMDIR) $(LOGDIR)
 	$(CC) -S $(SRC) $(C_FLAGS) -o $(ASM) 2>&1 | tee $(LOGFILE)
 	$(CC) $(ASM) $(C_FLAGS) -o $(EXEC) 2>&1 | tee -a $(LOGFILE)
 
