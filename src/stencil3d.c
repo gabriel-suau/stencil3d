@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <omp.h>
 
 /* #define abs(a) ((a) > 0 ? (a) : -(a)) */
 /* #define min(a,b) ((a > b) ? (b) : (a)) */
@@ -101,6 +102,9 @@ int main(int argc, char **argv) {
   else if (!strcmp(kernel, "inv_loop_onediv_tiled")) {
     stencil3d = stencil3d_inv_loop_onediv_tiled;
   }
+  else if (!strcmp(kernel, "inv_loop_onediv_omp")) {
+    stencil3d = stencil3d_inv_loop_onediv_omp;
+  }
   else {
     fprintf(stderr, "Error : %s : no corresponding kernel.\n", kernel);
     exit(EXIT_FAILURE);
@@ -190,7 +194,6 @@ void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b) {
 
   for (k = 1 ; k < SIZEZ - 1 ; k++)
     for (i = 1 ; i < SIZEY - 1 ; i++)
-/* #pragma GCC unroll 4 */
       for (j = 1 ; j < SIZEX - 1 ; j++)
 	cell(a, k, i, j) = (12 * cell(b, k, i, j) +
                             cell(b, k, i, j + 1) +
@@ -237,4 +240,27 @@ void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict 
     for (i = 1 ; i < SIZEY - 1 ; i += TILE_SIZE)
       for (j = 1 ; j < SIZEX - 1 ; j += TILE_SIZE)
         stencil3d_do_tile(&cell(a, k, i, j), &cell(b, k, i, j));
+}
+
+
+void stencil3d_inv_loop_onediv_omp(SCALAR *restrict a, const SCALAR *restrict b) {
+  int i, j, k;
+
+#pragma omp parallel for collapse(3)
+  for (k = 1 ; k < SIZEZ - 1 ; k++)
+    for (i = 1 ; i < SIZEY - 1 ; i++)
+      for (j = 1 ; j < SIZEX - 1 ; j++)
+	cell(a, k, i, j) = (12 * cell(b, k, i, j) +
+                            cell(b, k, i, j + 1) +
+                            cell(b, k, i, j - 1) +
+                            cell(b, k, i + 1, j + 1) +
+                            cell(b, k, i - 1, j - 1) +
+                            cell(b, k + 1, i, j + 1) +
+                            cell(b, k + 1, i, j - 1) +
+                            cell(b, k + 1, i + 1, j + 1) +
+                            cell(b, k + 1, i - 1, j - 1) +
+                            cell(b, k - 1, i, j + 1) +
+                            cell(b, k - 1, i, j - 1) +
+                            cell(b, k - 1, i + 1, j + 1) +
+                            cell(b, k - 1, i - 1, j - 1)) * INV_THIRTEEN;
 }
