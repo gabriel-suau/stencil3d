@@ -1,25 +1,36 @@
 #!/bin/bash
 
-EXEC=$1
-LOGFILE=./log/${EXEC##*/}.run
-
-if [[ ! -f $EXEC ]]
+if [[ $# -lt 1 ]]
 then
     echo ""
-    echo "## Error : Executable $EXEC does not exist."
-    echo "   Usage : $0 name_of_target"
+    echo "## Error : No executable provided."
+    echo "   Usage : $0 exec_1 exec_2 ... exec_n"
     echo ""
     exit
 fi
 
 declare -a kernels=("base" "inv_loop" "inv_loop_onediv" "inv_loop_onediv_tiled" "inv_loop_onediv_omp")
 
-echo ""
-echo "Running performance tests for $EXEC"
-echo ""
+for EXEC in $@; do
 
-for kernel in ${kernels[@]}; do
-    echo "Testing kernel :    $kernel"
-    echo "perf stat -e cache-misses,L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,L1-dcache-prefetches,L1-dcache-prefetch-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses $EXEC $kernel 2>&1 | tee -a $LOGFILE"
-    perf stat -e cache-misses,L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,L1-dcache-prefetches,L1-dcache-prefetch-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses $EXEC $kernel 2>&1 | tee -a $LOGFILE
+    if [[ ! -x $EXEC ]]
+    then
+        echo ""
+        echo "## Error : File $EXEC is not an executable. Moving to next file in list..."
+        echo ""
+        break
+    fi
+
+    LOGFILE=./log/${EXEC##*/}.run
+
+    echo ""
+    echo "Running performance tests for $EXEC"
+    echo ""
+
+    for KERNEL in ${kernels[@]}; do
+        echo "Testing kernel :    $KERNEL"
+        echo "perf stat -e cache-misses,L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,L1-dcache-prefetches,L1-dcache-prefetch-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses $EXEC $KERNEL 2>&1 | tee -a $LOGFILE"
+        perf stat -e cache-misses,L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,L1-dcache-prefetches,L1-dcache-prefetch-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses $EXEC $KERNEL 2>&1 | tee -a $LOGFILE
+    done
+
 done
