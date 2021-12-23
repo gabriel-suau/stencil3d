@@ -1,13 +1,26 @@
+##################################################
+# Makefile
+#
+# Easy compilation of multiple targets with same
+# sources but differents compilers and options.
+#
+# Author : Gabriel Suau
+##################################################
+
 CC = gcc
-C_FLAGS = -pg -pedantic
+C_FLAGS = -pedantic -fopenmp -march=native
 
-GCC_FLAGS = -Wall -Wextra -fopenmp -fopenacc -fopt-info-all
+GCC_FLAGS = -Wall -Wextra -fverbose-asm -fopenacc -fopt-info-all
 GCC_DEBUG_FLAGS = -O0 -g
-GCC_AUTOVEC_FLAGS = -O2
+GCC_AUTOVEC_FLAGS = -O3
 
-CLANG_FLAGS = -Weverything -fopenmp -Rpass=.* -Rpass-missed=.*
+CLANG_FLAGS = -Weverything -Rpass=.* -Rpass-missed=.*
 CLANG_DEBUG_FLAGS = -O0 -g
-CLANG_AUTOVEC_FLAGS = -O2
+CLANG_AUTOVEC_FLAGS = -O3
+
+ICC_FLAGS = -Wall -Wextra
+ICC_DEBUG_FLAGS = -O0 -g
+ICC_AUTOVEC_FLAGS = -O3
 
 SRCDIR = src
 BINDIR = bin
@@ -53,6 +66,20 @@ clang_autovec: ASM = $(ASMDIR)/clang_autovec.s
 clang_autovec: EXEC = $(BINDIR)/clang_autovec
 clang_autovec: LOGFILE = $(LOGDIR)/clang_autovec.comp
 clang_autovec: $(EXEC)
+
+icc_debug: CC = icc
+icc_debug: C_FLAGS += $(ICC_FLAGS) $(ICC_DEBUG_FLAGS)
+icc_debug: ASM = $(ASMDIR)/icc_debug.s
+icc_debug: EXEC = $(BINDIR)/icc_debug
+icc_debug: LOGFILE = $(LOGDIR)/icc_debug.comp
+icc_debug: $(EXEC)
+
+icc_autovec: CC = icc
+icc_autovec: C_FLAGS += $(ICC_FLAGS) $(ICC_AUTOVEC_FLAGS)
+icc_autovec: ASM = $(ASMDIR)/icc_autovec.s
+icc_autovec: EXEC = $(BINDIR)/icc_autovec
+icc_autovec: LOGFILE = $(LOGDIR)/icc_autovec.comp
+icc_autovec: $(EXEC)
 
 $(EXEC): $(SRC)
 	mkdir -p $(BINDIR) $(ASMDIR) $(LOGDIR)
