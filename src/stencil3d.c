@@ -9,9 +9,9 @@
 
 #define INV_THIRTEEN 0.07692307692307692307692
 
-#define SIZEX 130
-#define SIZEY 130
-#define SIZEZ 130
+#define SIZEX 128
+#define SIZEY 128
+#define SIZEZ 128
 
 #define TILE_SIZE 16
 
@@ -52,10 +52,19 @@ void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b);
  * \param[out] a array of values to be computed
  * \param[in] b array of values to compute a with
  *
+ * Same implementation as \a stencil3d_inv_loop_onediv, but the innermost loop
+ * is 2-unrolled.
+ */
+void stencil3d_inv_loop_unroll2(SCALAR *restrict a, const SCALAR *restrict b);
+
+/**
+ * \param[out] a array of values to be computed
+ * \param[in] b array of values to compute a with
+ *
  * Tiled implementation of \a stencil3d_inv_loop_onediv. The tile size is
  * chosen so that the whole tile can fit in the L1-cache
  */
-void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict b);
+void stencil3d_inv_loop_tiled(SCALAR *restrict a, const SCALAR *restrict b);
 
 /**
  * \param[out] a array of values to be computed
@@ -63,7 +72,7 @@ void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict 
  *
  * Straightforward OpenMP implementation of \a stencil3d_inv_loop_onediv.
  */
-void stencil3d_inv_loop_onediv_omp(SCALAR *restrict a, const SCALAR *restrict b);
+void stencil3d_inv_loop_omp(SCALAR *restrict a, const SCALAR *restrict b);
 
 /**
  * Function pointer to handle the user's kernel choice at runtime.
@@ -99,11 +108,14 @@ int main(int argc, char **argv) {
   else if (!strcmp(kernel, "inv_loop_onediv")) {
     stencil3d = stencil3d_inv_loop_onediv;
   }
-  else if (!strcmp(kernel, "inv_loop_onediv_tiled")) {
-    stencil3d = stencil3d_inv_loop_onediv_tiled;
+  else if (!strcmp(kernel, "inv_loop_unroll2")) {
+    stencil3d = stencil3d_inv_loop_unroll2;
   }
-  else if (!strcmp(kernel, "inv_loop_onediv_omp")) {
-    stencil3d = stencil3d_inv_loop_onediv_omp;
+  else if (!strcmp(kernel, "inv_loop_tiled")) {
+    stencil3d = stencil3d_inv_loop_tiled;
+  }
+  else if (!strcmp(kernel, "inv_loop_omp")) {
+    stencil3d = stencil3d_inv_loop_omp;
   }
   else {
     fprintf(stderr, "Error : %s : no corresponding kernel.\n", kernel);
@@ -172,6 +184,8 @@ void stencil3d_inv_loop(SCALAR *restrict a, const SCALAR *restrict b) {
 
   for (k = 1 ; k < SIZEZ - 1 ; k++)
     for (i = 1 ; i < SIZEY - 1 ; i++)
+/* #pragma GCC ivdep */
+/* #pragma clang loop vectorize(enable) interleave(enable) */
       for (j = 1 ; j < SIZEX - 1 ; j++)
 	cell(a, k, i, j) = (12 * cell(b, k, i, j) +
                             cell(b, k, i, j + 1) +
@@ -211,6 +225,42 @@ void stencil3d_inv_loop_onediv(SCALAR *restrict a, const SCALAR *restrict b) {
 }
 
 
+void stencil3d_inv_loop_unroll2(SCALAR *restrict a, const SCALAR *restrict b) {
+  int i, j, k;
+
+  for (k = 1 ; k < SIZEZ - 1 ; k++)
+    for (i = 1 ; i < SIZEY - 1 ; i++)
+      for (j = 1 ; j < SIZEX - 1 ; j += 2) {
+	cell(a, k, i, j) = (12 * cell(b, k, i, j) +
+                            cell(b, k, i, j + 1) +
+                            cell(b, k, i, j - 1) +
+                            cell(b, k, i + 1, j + 1) +
+                            cell(b, k, i - 1, j - 1) +
+                            cell(b, k + 1, i, j + 1) +
+                            cell(b, k + 1, i, j - 1) +
+                            cell(b, k + 1, i + 1, j + 1) +
+                            cell(b, k + 1, i - 1, j - 1) +
+                            cell(b, k - 1, i, j + 1) +
+                            cell(b, k - 1, i, j - 1) +
+                            cell(b, k - 1, i + 1, j + 1) +
+                            cell(b, k - 1, i - 1, j - 1)) * INV_THIRTEEN;
+        cell(a, k, i, j + 1) = (12 * cell(b, k, i, j + 1) +
+                                cell(b, k, i, j + 2) +
+                                cell(b, k, i, j) +
+                                cell(b, k, i + 1, j + 2) +
+                                cell(b, k, i - 1, j) +
+                                cell(b, k + 1, i, j + 2) +
+                                cell(b, k + 1, i, j) +
+                                cell(b, k + 1, i + 1, j + 2) +
+                                cell(b, k + 1, i - 1, j) +
+                                cell(b, k - 1, i, j + 2) +
+                                cell(b, k - 1, i, j) +
+                                cell(b, k - 1, i + 1, j + 2) +
+                                cell(b, k - 1, i - 1, j)) * INV_THIRTEEN;
+      }
+}
+
+
 static inline void stencil3d_do_tile(SCALAR *restrict a, const SCALAR *restrict b) {
   int i, j, k;
 
@@ -229,11 +279,11 @@ static inline void stencil3d_do_tile(SCALAR *restrict a, const SCALAR *restrict 
                             cell(b, k - 1, i, j + 1) +
                             cell(b, k - 1, i, j - 1) +
                             cell(b, k - 1, i + 1, j + 1) +
-                            cell(b, k - 1, i - 1, j - 1)) * INV_THIRTEEN;        
+                            cell(b, k - 1, i - 1, j - 1)) * INV_THIRTEEN;
 }
 
 
-void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict b) {
+void stencil3d_inv_loop_tiled(SCALAR *restrict a, const SCALAR *restrict b) {
   int i, j, k;
 
   for (k = 1 ; k < SIZEZ - 1 ; k += TILE_SIZE)
@@ -243,7 +293,7 @@ void stencil3d_inv_loop_onediv_tiled(SCALAR *restrict a, const SCALAR *restrict 
 }
 
 
-void stencil3d_inv_loop_onediv_omp(SCALAR *restrict a, const SCALAR *restrict b) {
+void stencil3d_inv_loop_omp(SCALAR *restrict a, const SCALAR *restrict b) {
   int i, j, k;
 
 #pragma omp parallel for collapse(3)
