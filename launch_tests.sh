@@ -1,5 +1,15 @@
 #!/bin/bash
 
+##########################################################
+# launch_tests.sh
+#
+# Launch a battery of performance tests on the specified
+# executables and for the specified kernels using perf.
+#
+# Author : Gabriel Suau
+#
+##########################################################
+
 if [[ $# -lt 1 ]]
 then
     echo ""
@@ -9,7 +19,7 @@ then
     exit
 fi
 
-declare -a kernels=("base" "inv_loop" "inv_loop_onediv" "inv_loop_onediv_tiled" "inv_loop_onediv_omp")
+declare -a kernels=("base" "inv_loop" "inv_loop_onediv" "inv_loop_unroll2" "inv_loop_tiled" "inv_loop_omp")
 
 for EXEC in $@; do
 
@@ -32,7 +42,7 @@ for EXEC in $@; do
     for KERNEL in ${kernels[@]}; do
         echo "Testing kernel :    $KERNEL"
         echo "perf stat -e cache-misses,L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,L1-dcache-prefetches,L1-dcache-prefetch-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses $EXEC $KERNEL 2>&1 | tee -a $LOGFILE"
-        perf stat -e cache-misses,L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,L1-dcache-prefetches,L1-dcache-prefetch-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses $EXEC $KERNEL 2>&1 | tee -a $LOGFILE
+        perf stat -e cache-misses,L1-dcache-loads,L1-dcache-load-misses,L1-dcache-stores,L1-dcache-store-misses,L1-dcache-prefetches,L1-dcache-prefetch-misses,LLC-loads,LLC-load-misses,LLC-stores,LLC-store-misses $EXEC $KERNEL | tee -a $LOGFILE
     done
 
 done
