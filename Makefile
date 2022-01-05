@@ -8,17 +8,17 @@
 ##################################################
 
 CC = gcc
-C_FLAGS = -pedantic -fopenmp -march=native
+C_FLAGS = -pedantic -march=native
 
-GCC_FLAGS = -Wall -Wextra -fverbose-asm -fopenacc -fopt-info-all
+GCC_FLAGS = -Wall -Wextra -fverbose-asm -fopenmp -fopenacc -fopt-info-all
 GCC_DEBUG_FLAGS = -O0 -g
 GCC_AUTOVEC_FLAGS = -O3
 
-CLANG_FLAGS = -Weverything -Rpass=.* -Rpass-missed=.*
+CLANG_FLAGS = -Weverything -fopenmp -Rpass=.* -Rpass-missed=.*
 CLANG_DEBUG_FLAGS = -O0 -g
 CLANG_AUTOVEC_FLAGS = -O3
 
-ICC_FLAGS = -Wall -Wextra
+ICC_FLAGS = -Wall -Wextra -Wremarks -Wchecks -qopenmp -qopt-report=5 -qopt-report-file=stderr
 ICC_DEBUG_FLAGS = -O0 -g
 ICC_AUTOVEC_FLAGS = -O3
 
@@ -82,9 +82,17 @@ icc_autovec: LOGFILE = $(LOGDIR)/icc_autovec.comp
 icc_autovec: $(EXEC)
 
 $(EXEC): $(SRC)
+	@echo "--------------------------------------------------"
+	@echo "Building target $(EXEC)"
 	mkdir -p $(BINDIR) $(ASMDIR) $(LOGDIR)
-	$(CC) -S $(SRC) $(C_FLAGS) -o $(ASM) 2>&1 | tee $(LOGFILE)
-	$(CC) $(ASM) $(C_FLAGS) -o $(EXEC) 2>&1 | tee -a $(LOGFILE)
+	$(CC) -S $(SRC) $(C_FLAGS) -o $(ASM) 2> $(LOGFILE)
+	$(CC) $(ASM) $(C_FLAGS) -o $(EXEC) 2> $(LOGFILE)
+	@echo "--------------------------------------------------"
+
+# $(EXEC): $(SRC)
+# 	mkdir -p $(BINDIR) $(ASMDIR) $(LOGDIR)
+# 	$(CC) -S $(SRC) $(C_FLAGS) -o $(ASM) > $(LOGFILE)
+# 	$(CC) $(ASM) $(C_FLAGS) -o $(EXEC) > $(LOGFILE)
 
 clean:
 	rm -f $(BINDIR)/* $(ASMDIR)/* $(LOGDIR)/* gmon.out
