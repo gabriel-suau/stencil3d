@@ -86,7 +86,7 @@ $(EXEC): $(SRC)
 	@echo "Building target $(EXEC)"
 	mkdir -p $(BINDIR) $(ASMDIR) $(LOGDIR)
 	$(CC) -S $(SRC) $(C_FLAGS) -o $(ASM) 2> $(LOGFILE)
-	$(CC) $(ASM) $(C_FLAGS) -o $(EXEC) 2> $(LOGFILE)
+	$(CC) $(ASM) $(C_FLAGS) -o $(EXEC) 2>> $(LOGFILE)
 	@echo "--------------------------------------------------"
 
 # $(EXEC): $(SRC)
